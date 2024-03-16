@@ -1,6 +1,7 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Room as TrysteroRoom, joinRoom } from "trystero/firebase";
+import { Room as TrysteroRoom } from "trystero";
+import { joinRoom } from "trystero/firebase";
 import {
   Group,
   Text,
