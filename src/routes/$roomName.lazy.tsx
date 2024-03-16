@@ -1,9 +1,14 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Room as TrysteroRoom, joinRoom } from "trystero/firebase";
-import { Group, Text, Table, rem, Badge } from "@mantine/core";
+import { Group, Text, Table, rem, Badge, ActionIcon } from "@mantine/core";
 import { Dropzone, DropzoneProps, FileWithPath } from "@mantine/dropzone";
-import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
+import {
+  IconDownload,
+  IconPhoto,
+  IconUpload,
+  IconX,
+} from "@tabler/icons-react";
 import { create } from "zustand";
 
 export const Route = createLazyFileRoute("/$roomName")({
@@ -71,10 +76,7 @@ export function Room() {
     //   console.log("peers", joinedRoom.getPeers());
     // }, 500);
 
-    return () => {
-      room?.leave();
-      joinedRoom.leave();
-    };
+    return () => joinedRoom.leave();
   }, [roomName]);
 
   if (!room) {
@@ -269,9 +271,11 @@ function FileList() {
         Extension: (file.name.split(".")[1] ?? "-").toUpperCase(),
         Size: `${Math.ceil(file.size / 1024)} KB`,
         "": (
-          <Badge onClick={() => sendRequestFileDowload(idx, peerId)}>
-            Download
-          </Badge>
+          <ActionIcon variant="transparent" color="teal">
+            <IconDownload onClick={() => sendRequestFileDowload(idx, peerId)}>
+              Download
+            </IconDownload>
+          </ActionIcon>
         ) as unknown as string,
       })}
     </Table.Tr>
