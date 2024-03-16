@@ -1,6 +1,6 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { useEffect,  } from "react";
-import { Room as TrysteroRoom, joinRoom } from "trystero";
+import { useEffect } from "react";
+import { Room as TrysteroRoom, joinRoom } from "trystero/firebase";
 import { Group, Text, Table, rem, Badge } from "@mantine/core";
 import { Dropzone, DropzoneProps, FileWithPath } from "@mantine/dropzone";
 import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
@@ -19,10 +19,10 @@ const usePeerStore = create<{
 }));
 
 const useRoomStore = create<{
-  room?: TrysteroRoom;
+  room: TrysteroRoom;
   setRoom: (room?: TrysteroRoom) => void;
 }>((set) => ({
-  room: undefined,
+  room: undefined!,
   setRoom: (room) => set({ room }),
 }));
 
@@ -30,45 +30,61 @@ export function Room() {
   const { roomName } = Route.useParams();
 
   const setPeerId = usePeerStore((state) => state.setPeerId);
+  const { setRoom, room } = useRoomStore();
 
-  function join() {
-    alert("RENDER")
-
-    setPeerId(undefined);
-
-    const room = joinRoom(
-      { appId: "bjqHC6AlTOqa2yqVIMCrf2RUvez4BwwLgPvauYuxBCYsVyaK" },
-      roomName
-    );
-
-    room.onPeerJoin((peerId) => {
-      const peers = room.getPeers();
-
-      if (Object.keys(peers).length > 1) {
-        // TODO:
-        alert("ROOM IS MADE FOR 2 PEOPLE MAX");
-        throw new Error("ROOM IS MADE FOR 2 PEOPLE MAX");
-      }
-
-      console.log(`${peerId} joined`);
-      setPeerId(peerId);
-    });
-    room.onPeerLeave((peerId) => {
-      console.log(`${peerId} left`);
+  useEffect(() => {
+    function join() {
       setPeerId(undefined);
-    });
+      const room = joinRoom(
+        {
+          appId: "https://chlouzada-default-rtdb.firebaseio.com",
+        },
+        roomName
+      );
 
-    return room;
+      room.onPeerJoin((peerId) => {
+        const peers = room.getPeers();
+
+        if (Object.keys(peers).length > 1) {
+          // TODO:
+          alert("ROOM IS MADE FOR 2 PEOPLE MAX");
+          throw new Error("ROOM IS MADE FOR 2 PEOPLE MAX");
+        }
+
+        console.log(`${peerId} joined`);
+        setPeerId(peerId);
+      });
+
+      room.onPeerLeave((peerId) => {
+        console.log(`${peerId} left`);
+        setPeerId(undefined);
+      });
+
+      return room;
+    }
+
+    const joinedRoom = join();
+
+    setRoom(joinedRoom);
+
+    // const setIntervalId = setInterval(() => {
+    //   console.log("peers", joinedRoom.getPeers());
+    // }, 500);
+
+    return () => {
+      room?.leave();
+      joinedRoom.leave();
+    };
+  }, [roomName]);
+
+  if (!room) {
+    return <></>;
   }
 
-  const room = join();
-
-  // FIXME: not working (on initial load its not joining the room) (only dev kinda works)
-
-  return <Joined room={room} />;
+  return <Joined />;
 }
 
-const Joined = ({ room }: { room: TrysteroRoom }) => {
+const Joined = () => {
   const peerId = usePeerStore((state) => state.peerId);
 
   return (
@@ -78,7 +94,7 @@ const Joined = ({ room }: { room: TrysteroRoom }) => {
       </Badge>
 
       <FileDropzone />
-      <FileList room={room} />
+      <FileList />
     </>
   );
 };
@@ -168,9 +184,10 @@ function FileDropzone(props: Partial<DropzoneProps>) {
   );
 }
 
-function FileList({ room }: { room: TrysteroRoom }) {
+function FileList() {
   const TABLE_HEADERS = ["File Name", "Extension", "Size", ""] as const;
 
+  const room = useRoomStore((state) => state.room);
   const peerId = usePeerStore((state) => state.peerId);
   const files = useFileServerStore((state) => state.files);
   const setRemoteFiles = useFileServerStore((state) => state.setRemoteFiles);
