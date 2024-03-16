@@ -1,5 +1,5 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect,  } from "react";
 import { Room as TrysteroRoom, joinRoom } from "trystero";
 import { Group, Text, Table, rem, Badge } from "@mantine/core";
 import { Dropzone, DropzoneProps, FileWithPath } from "@mantine/dropzone";
@@ -31,27 +31,37 @@ export function Room() {
 
   const setPeerId = usePeerStore((state) => state.setPeerId);
 
-  const room = joinRoom(
-    { appId: "bjqHC6AlTOqa2yqVIMCrf2RUvez4BwwLgPvauYuxBCYsVyaK" },
-    roomName
-  );
+  function join() {
+    alert("RENDER")
 
-  room.onPeerJoin((peerId) => {
-    const peers = room.getPeers();
-
-    if (Object.keys(peers).length > 1) {
-      // TODO:
-      alert("ROOM IS MADE FOR 2 PEOPLE MAX");
-      throw new Error("ROOM IS MADE FOR 2 PEOPLE MAX");
-    }
-
-    console.log(`${peerId} joined`);
-    setPeerId(peerId);
-  });
-  room.onPeerLeave((peerId) => {
-    console.log(`${peerId} left`);
     setPeerId(undefined);
-  });
+
+    const room = joinRoom(
+      { appId: "bjqHC6AlTOqa2yqVIMCrf2RUvez4BwwLgPvauYuxBCYsVyaK" },
+      roomName
+    );
+
+    room.onPeerJoin((peerId) => {
+      const peers = room.getPeers();
+
+      if (Object.keys(peers).length > 1) {
+        // TODO:
+        alert("ROOM IS MADE FOR 2 PEOPLE MAX");
+        throw new Error("ROOM IS MADE FOR 2 PEOPLE MAX");
+      }
+
+      console.log(`${peerId} joined`);
+      setPeerId(peerId);
+    });
+    room.onPeerLeave((peerId) => {
+      console.log(`${peerId} left`);
+      setPeerId(undefined);
+    });
+
+    return room;
+  }
+
+  const room = join();
 
   // FIXME: not working (on initial load its not joining the room) (only dev kinda works)
 
