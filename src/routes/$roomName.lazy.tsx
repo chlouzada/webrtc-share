@@ -1,12 +1,14 @@
+import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import "./App.css";
-import { Room, joinRoom } from "trystero";
+import { Room as TrysteroRoom, joinRoom } from "trystero";
 import { Group, Text, Table, rem, Badge } from "@mantine/core";
 import { Dropzone, DropzoneProps, FileWithPath } from "@mantine/dropzone";
 import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
 import { create } from "zustand";
 
-const ROOM_NAME = "1";
+export const Route = createLazyFileRoute("/$roomName")({
+  component: Room,
+});
 
 const usePeerStore = create<{
   peerId?: string;
@@ -17,54 +19,46 @@ const usePeerStore = create<{
 }));
 
 const useRoomStore = create<{
-  room?: Room;
-  setRoom: (room?: Room) => void;
+  room?: TrysteroRoom;
+  setRoom: (room?: TrysteroRoom) => void;
 }>((set) => ({
   room: undefined,
   setRoom: (room) => set({ room }),
 }));
 
-function App() {
-  const [room, setRoom] = useState<Room | null>(null);
+export function Room() {
+  const { roomName } = Route.useParams();
 
   const setPeerId = usePeerStore((state) => state.setPeerId);
 
-  useEffect(() => {
-    const room = joinRoom({ appId: 'bjqHC6AlTOqa2yqVIMCrf2RUvez4BwwLgPvauYuxBCYsVyaK' }, ROOM_NAME);
+  const room = joinRoom(
+    { appId: "bjqHC6AlTOqa2yqVIMCrf2RUvez4BwwLgPvauYuxBCYsVyaK" },
+    roomName
+  );
 
-    room.onPeerJoin((peerId) => {
-      const peers = room.getPeers();
+  room.onPeerJoin((peerId) => {
+    const peers = room.getPeers();
 
-      if (Object.keys(peers).length > 1) {
-        // TODO: 
-        alert("ROOM IS MADE FOR 2 PEOPLE MAX");
-        throw new Error("ROOM IS MADE FOR 2 PEOPLE MAX");
-      }
+    if (Object.keys(peers).length > 1) {
+      // TODO:
+      alert("ROOM IS MADE FOR 2 PEOPLE MAX");
+      throw new Error("ROOM IS MADE FOR 2 PEOPLE MAX");
+    }
 
-      console.log(`${peerId} joined`);
-      setPeerId(peerId);
-    });
-    room.onPeerLeave((peerId) => {
-      console.log(`${peerId} left`);
-      setPeerId(undefined);
-    });
+    console.log(`${peerId} joined`);
+    setPeerId(peerId);
+  });
+  room.onPeerLeave((peerId) => {
+    console.log(`${peerId} left`);
+    setPeerId(undefined);
+  });
 
-    setRoom(room);
-
-    // FIXME: not working (on initial load its not joining the room) (only dev kinda works)
-    return () => {
-      if (import.meta.env.DEV) {
-        room.leave();
-      }
-    };
-  }, []);
-
-  if (!room) return <>No room</>;
+  // FIXME: not working (on initial load its not joining the room) (only dev kinda works)
 
   return <Joined room={room} />;
 }
 
-const Joined = ({ room }: { room: Room }) => {
+const Joined = ({ room }: { room: TrysteroRoom }) => {
   const peerId = usePeerStore((state) => state.peerId);
 
   return (
@@ -164,7 +158,7 @@ function FileDropzone(props: Partial<DropzoneProps>) {
   );
 }
 
-function FileList({ room }: { room: Room }) {
+function FileList({ room }: { room: TrysteroRoom }) {
   const TABLE_HEADERS = ["File Name", "Extension", "Size", ""] as const;
 
   const peerId = usePeerStore((state) => state.peerId);
@@ -274,5 +268,3 @@ function FileList({ room }: { room: Room }) {
     </Table>
   );
 }
-
-export default App;

@@ -1,18 +1,29 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import {
+  RouterProvider,
+  createRouter,
+  createHashHistory,
+} from "@tanstack/react-router";
+import { MantineProvider } from "@mantine/core";
+import { routeTree } from "./routeTree.gen";
 
-// Import styles of packages that you've installed.
-// All packages except `@mantine/hooks` require styles imports
-import '@mantine/core/styles.css';
+import "./index.css";
+import "@mantine/core/styles.css";
 
-import { MantineProvider } from '@mantine/core';
+const history = createHashHistory();
+const router = createRouter({ routeTree, history });
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+ReactDOM.createRoot(document.getElementById("app")!).render(
   <React.StrictMode>
     <MantineProvider>
-    <App />
+      <RouterProvider router={router} />
     </MantineProvider>
-  </React.StrictMode>,
-)
+  </React.StrictMode>
+);
+
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
