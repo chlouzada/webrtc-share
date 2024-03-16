@@ -1,9 +1,18 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Room as TrysteroRoom, joinRoom } from "trystero/firebase";
-import { Group, Text, Table, rem, Badge, ActionIcon } from "@mantine/core";
+import {
+  Group,
+  Text,
+  Table,
+  rem,
+  Badge,
+  ActionIcon,
+  RingProgress,
+} from "@mantine/core";
 import { Dropzone, DropzoneProps, FileWithPath } from "@mantine/dropzone";
 import {
+  IconDeviceFloppy,
   IconDownload,
   IconPhoto,
   IconUpload,
@@ -89,6 +98,9 @@ export function Room() {
 const Joined = () => {
   const peerId = usePeerStore((state) => state.peerId);
 
+  useSync();
+  useDownload();
+
   return (
     <>
       <Badge size="xl" color={peerId ? "green" : "red"}>
@@ -101,14 +113,12 @@ const Joined = () => {
   );
 };
 
-type RemoveFile = {
-  name: string;
-  size: number;
-};
-
-const useFileServerStore = create<{
+const useFileStore = create<{
   files: {
-    remote: RemoveFile[];
+    remote: {
+      name: string;
+      size: number;
+    }[];
     local: FileWithPath[];
   };
   setRemoteFiles: (files: File[]) => void;
@@ -127,13 +137,13 @@ const useFileServerStore = create<{
 }));
 
 function FileDropzone(props: Partial<DropzoneProps>) {
-  const addLocalFiles = useFileServerStore((state) => state.addLocalFiles);
+  const addLocalFiles = useFileStore((state) => state.addLocalFiles);
 
   return (
     <Dropzone
       onDrop={addLocalFiles}
       onReject={(files) => console.log("rejected files", files)}
-      maxSize={5 * 1024 ** 2}
+      // maxSize={5 * 1024 ** 2}
       {...props}
     >
       <Group
@@ -186,69 +196,42 @@ function FileDropzone(props: Partial<DropzoneProps>) {
   );
 }
 
-function FileList() {
-  const TABLE_HEADERS = ["File Name", "Extension", "Size", ""] as const;
-
+const useSync = () => {
   const room = useRoomStore((state) => state.room);
+  const files = useFileStore((state) => state.files);
   const peerId = usePeerStore((state) => state.peerId);
-  const files = useFileServerStore((state) => state.files);
-  const setRemoteFiles = useFileServerStore((state) => state.setRemoteFiles);
+  const setRemoteFiles = useFileStore((state) => state.setRemoteFiles);
 
   const [sendLocalFiles, onLocalFiles] = room.makeAction("local-files");
 
-  const [sendRequestFileDowload, onRequestFileDownload] =
-    room.makeAction("request-dl");
-
-  const [sendDownload, onDownload] = room.makeAction("download");
-
   useEffect(() => {
-    if (files.local.length === 0) return;
-
-    const localFiles = files.local.map((file) => ({
-      name: file.name,
-      size: file.size,
-    }));
-
-    sendLocalFiles(localFiles, peerId);
+    sendLocalFiles(
+      files.local.map((file) => ({
+        name: file.name,
+        size: file.size,
+      })),
+      peerId
+    );
   }, [files.local]);
 
   useEffect(() => {
     if (peerId === undefined) return;
-    // receiveDrink((data, peerId) => console.log(`got a ${data} from ${peerId}`));
-
-    onRequestFileDownload(async (idx, peerId) => {
-      console.log(`got a request from ${peerId} to download file ${idx}`);
-      console.log(files);
-
-      const file = files.local[Number(idx)];
-
-      const buffer = await file.arrayBuffer();
-
-      sendDownload(buffer, peerId, {
-        index: Number(idx),
-      });
-    });
 
     onLocalFiles((data, peerId) => {
       console.log(`got a file from ${peerId}`, data);
       setRemoteFiles(data as unknown as File[]);
     });
+  }, [peerId, files.local]);
+};
 
-    onDownload((data, peerId, metadata: any) => {
-      console.log(`got a buffer from ${peerId}`);
-      const blob = new Blob([data as ArrayBuffer], {
-        type: "application/octet-stream",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = files.remote[metadata.index].name;
-      a.click();
-      URL.revokeObjectURL(url);
-    });
-  }, [peerId, files.local, files.remote]);
+function FileList() {
+  const TABLE_HEADERS = ["File Name", "Extension", "Size", ""] as const;
 
-  const row = (map: Record<(typeof TABLE_HEADERS)[number] & string, string>) =>
+  const files = useFileStore((state) => state.files);
+
+  const row = (
+    map: Record<(typeof TABLE_HEADERS)[number] & string, string | JSX.Element>
+  ) =>
     Object.values(TABLE_HEADERS).map((header) => (
       <Table.Td key={header}>{map[header]}</Table.Td>
     ));
@@ -259,7 +242,7 @@ function FileList() {
         "File Name": file.name.split(".")[0],
         Extension: (file.name.split(".")[1] ?? "-").toUpperCase(),
         Size: `${Math.ceil(file.size / 1024)} KB`,
-        "": "UPDATE | DELETE", // TODO: Add buttons
+        "": "TODO: UPDATE | DELETE",
       })}
     </Table.Tr>
   ));
@@ -270,18 +253,14 @@ function FileList() {
         "File Name": file.name.split(".")[0],
         Extension: (file.name.split(".")[1] ?? "-").toUpperCase(),
         Size: `${Math.ceil(file.size / 1024)} KB`,
-        "": (
-          <ActionIcon variant="transparent" color="teal">
-            <IconDownload onClick={() => sendRequestFileDowload(idx, peerId)}>
-              Download
-            </IconDownload>
-          </ActionIcon>
-        ) as unknown as string,
+        "": <DownloadButton fileIndex={idx} />,
       })}
     </Table.Tr>
   ));
 
-  if (files.remote.length === 0 && files.local.length === 0) return <></>;
+  if (files.remote.length === 0 && files.local.length === 0) {
+    return <></>;
+  }
 
   return (
     <Table>
@@ -299,3 +278,126 @@ function FileList() {
     </Table>
   );
 }
+
+const useDownload = () => {
+  const room = useRoomStore((state) => state.room);
+  const files = useFileStore((state) => state.files);
+  const peerId = usePeerStore((state) => state.peerId);
+
+  const [progress, setProgress] = useState<{
+    [K in number]: number;
+  }>({});
+
+  const [blobs, setBlobs] = useState<{
+    [K in number]: Blob;
+  }>({});
+
+  const [requestFile, onRequestFile] = room.makeAction("request-dl");
+
+  const [sendDownload, onDownload, onDownloadProgress] =
+    room.makeAction("download");
+
+  useEffect(() => {
+    if (peerId === undefined) return;
+    // receiveDrink((data, peerId) => console.log(`got a ${data} from ${peerId}`));
+
+    onRequestFile(async (idx, peerId) => {
+      console.log(`got a request from ${peerId} to download file ${idx}`);
+      console.log(files);
+
+      const file = files.local[Number(idx)];
+
+      const buffer = await file.arrayBuffer();
+
+      sendDownload(buffer, peerId, {
+        index: Number(idx),
+      });
+    });
+
+    onDownload((data, peerId, metadata: any) => {
+      console.log(`got a buffer from ${peerId}`);
+      const blob = new Blob([data as ArrayBuffer], {
+        type: "application/octet-stream",
+      });
+
+      setBlobs((prev) => ({ ...prev, [metadata.index]: blob }));
+
+      // const url = URL.createObjectURL(blob);
+      // const a = document.createElement("a");
+      // a.href = url;
+      // a.download = files.remote[metadata.index].name;
+      // a.click();
+      // URL.revokeObjectURL(url);
+    });
+
+    onDownloadProgress((percent, peerId, metadata: any) => {
+      console.log(`${percent * 100}% done receiving from ${peerId}`, metadata);
+      setProgress((prev) => ({
+        ...prev,
+        [metadata.index]: percent * 100,
+      }));
+    });
+  }, [peerId, files.local, files.remote]);
+
+  return {
+    download: async (index: number) => {
+      requestFile(index, peerId);
+    },
+    progress: progress,
+    save: (index: number) => {
+      const blob = blobs[index];
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = files.remote[index].name;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+  };
+};
+
+const DownloadButton = ({ fileIndex }: { fileIndex: number }) => {
+  const { download, progress, save } = useDownload();
+
+  const VARIANT = "transparent";
+  const COLOR = "teal";
+
+  const percentage = progress[fileIndex] ?? -1;
+
+  const isDownloaded = percentage === 100;
+  const isDownloading = percentage > 0 && percentage < 100;
+  const isWaiting = percentage === -1;
+
+  return (
+    <>
+      {isDownloaded && (
+        <ActionIcon variant={VARIANT} color={COLOR} size={30}>
+          <IconDeviceFloppy
+            onClick={() => {
+              alert("DOWNLOADED");
+              save(fileIndex);
+            }}
+            size={22}
+          />
+        </ActionIcon>
+      )}
+      {isDownloading && (
+        <RingProgress
+          size={30}
+          thickness={2}
+          sections={[{ value: percentage, color: "teal" }]}
+          label={
+            <div className="flex justify-center">
+              <IconDownload color="#12B886" size={18} />
+            </div>
+          }
+        />
+      )}
+      {isWaiting && (
+        <ActionIcon variant={VARIANT} color={COLOR} size={30}>
+          <IconDownload size={18} onClick={() => download(fileIndex)} />
+        </ActionIcon>
+      )}
+    </>
+  );
+};
