@@ -12,7 +12,7 @@ const Header = () => {
     <header className="w-full">
       <div className="p-4 mx-auto max-w-7xl flex self-center">
         <Link to="/">
-          <span className="text-2xl font-bold">
+          <span className="text-2xl font-bold tracking-tight">
             WebRTC
             <Text component="span" c={theme.primaryColor}>
               <span className="text-2xl font-bold">Share</span>
