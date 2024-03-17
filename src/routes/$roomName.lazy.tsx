@@ -10,6 +10,7 @@ import {
   Badge,
   ActionIcon,
   RingProgress,
+  useMantineTheme,
 } from "@mantine/core";
 import { Dropzone, DropzoneProps, FileWithPath } from "@mantine/dropzone";
 import {
@@ -52,9 +53,9 @@ export function Room() {
       setPeerId(undefined);
       const room = joinRoom(
         {
-          appId: "https://chlouzada-default-rtdb.firebaseio.com",
+          appId: import.meta.env.VITE_APP_FB_RTDB_URL,
         },
-        roomName
+        `${import.meta.env.VITE_APP_ROOM_NAME_PREFIX}-${roomName}`
       );
 
       room.onPeerJoin((peerId) => {
@@ -240,7 +241,7 @@ function FileList() {
   const rows = files.local.map((file, idx) => (
     <Table.Tr key={`tr-${idx}`}>
       {row({
-        "File Name": file.name.split(".")[0],
+        "File Name": file.name.split(".")[0]!,
         Extension: (file.name.split(".")[1] ?? "-").toUpperCase(),
         Size: `${Math.ceil(file.size / 1024)} KB`,
         "": "TODO: UPDATE | DELETE",
@@ -251,7 +252,7 @@ function FileList() {
   const rows2 = files.remote.map((file, idx) => (
     <Table.Tr key={`tr-${idx}-2`}>
       {row({
-        "File Name": file.name.split(".")[0],
+        "File Name": file.name.split(".")[0]!,
         Extension: (file.name.split(".")[1] ?? "-").toUpperCase(),
         Size: `${Math.ceil(file.size / 1024)} KB`,
         "": <DownloadButton fileIndex={idx} />,
@@ -300,18 +301,21 @@ const useDownload = () => {
 
   useEffect(() => {
     if (peerId === undefined) return;
-    // receiveDrink((data, peerId) => console.log(`got a ${data} from ${peerId}`));
 
-    onRequestFile(async (idx, peerId) => {
-      console.log(`got a request from ${peerId} to download file ${idx}`);
-      console.log(files);
+    onRequestFile(async (index, peerId) => {
+      console.log(`got a request from ${peerId} to download file ${index}`);
 
-      const file = files.local[Number(idx)];
+      const file = files.local[Number(index)];
+
+      if (!file) {
+        // TODO: alert user
+        throw new Error(`File not found at index ${index}`);
+      }
 
       const buffer = await file.arrayBuffer();
 
       sendDownload(buffer, peerId, {
-        index: Number(idx),
+        index: Number(index),
       });
     });
 
@@ -320,15 +324,7 @@ const useDownload = () => {
       const blob = new Blob([data as ArrayBuffer], {
         type: "application/octet-stream",
       });
-
       setBlobs((prev) => ({ ...prev, [metadata.index]: blob }));
-
-      // const url = URL.createObjectURL(blob);
-      // const a = document.createElement("a");
-      // a.href = url;
-      // a.download = files.remote[metadata.index].name;
-      // a.click();
-      // URL.revokeObjectURL(url);
     });
 
     onDownloadProgress((percent, peerId, metadata: any) => {
@@ -347,10 +343,16 @@ const useDownload = () => {
     progress: progress,
     save: (index: number) => {
       const blob = blobs[index];
+
+      if (!blob) {
+        //TODO: alert user
+        throw new Error(`Blob not found at index ${index}`);
+      }
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = files.remote[index].name;
+      a.download = files.remote[index]?.name || "default";
       a.click();
       URL.revokeObjectURL(url);
     },
@@ -360,19 +362,16 @@ const useDownload = () => {
 const DownloadButton = ({ fileIndex }: { fileIndex: number }) => {
   const { download, progress, save } = useDownload();
 
-  const VARIANT = "transparent";
-  const COLOR = "teal";
-
-  const percentage = progress[fileIndex] ?? -1;
+  const percentage = progress[fileIndex];
 
   const isDownloaded = percentage === 100;
-  const isDownloading = percentage > 0 && percentage < 100;
-  const isWaiting = percentage === -1;
+  const isDownloading = percentage && percentage > 0 && percentage < 100;
+  const isWaiting = percentage === undefined;
 
   return (
     <>
       {isDownloaded && (
-        <ActionIcon variant={VARIANT} color={COLOR} size={30}>
+        <ActionIcon size={30}>
           <IconDeviceFloppy
             onClick={() => {
               alert("DOWNLOADED");
@@ -388,14 +387,14 @@ const DownloadButton = ({ fileIndex }: { fileIndex: number }) => {
           thickness={2}
           sections={[{ value: percentage, color: "teal" }]}
           label={
-            <div className="flex justify-center">
-              <IconDownload color="#12B886" size={18} />
+            <div className="flex justify-center p-1">
+              <IconDownload size={16} />
             </div>
           }
         />
       )}
       {isWaiting && (
-        <ActionIcon variant={VARIANT} color={COLOR} size={30}>
+        <ActionIcon size={30}>
           <IconDownload size={18} onClick={() => download(fileIndex)} />
         </ActionIcon>
       )}
