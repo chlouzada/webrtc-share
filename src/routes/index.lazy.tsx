@@ -1,4 +1,5 @@
 import { Button, Input } from "@mantine/core";
+import { IconRefresh } from "@tabler/icons-react";
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -28,9 +29,19 @@ function Index() {
           navigate({ to: "/$roomName", params: { roomName } });
         }}
       >
+        <Button
+          variant="transparent"
+          size="xs"
+          onClick={() => {
+            const randomRoomName = Math.random().toString(36).substring(7);
+            setRoomName(randomRoomName);
+          }}
+        >
+          <IconRefresh />
+        </Button>
         <Input
           className="w-full lg:w-64"
-          placeholder="Enter room name or link"
+          placeholder="Enter room name"
           value={roomName}
           onChange={(e) => setRoomName(e.currentTarget.value)}
         />

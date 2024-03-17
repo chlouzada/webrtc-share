@@ -10,7 +10,6 @@ import {
   Badge,
   ActionIcon,
   RingProgress,
-  useMantineTheme,
 } from "@mantine/core";
 import { Dropzone, DropzoneProps, FileWithPath } from "@mantine/dropzone";
 import {
@@ -43,7 +42,7 @@ const useRoomStore = create<{
 }));
 
 export function Room() {
-  const { roomName } = Route.useParams();
+  const roomName = Route.useParams().roomName.toLowerCase();
 
   const setPeerId = usePeerStore((state) => state.setPeerId);
   const { setRoom, room } = useRoomStore();
@@ -54,6 +53,7 @@ export function Room() {
       const room = joinRoom(
         {
           appId: import.meta.env.VITE_APP_FB_RTDB_URL,
+          rootPath: '__webrtc-share__/rooms'
         },
         `${import.meta.env.VITE_APP_ROOM_NAME_PREFIX}-${roomName}`
       );
