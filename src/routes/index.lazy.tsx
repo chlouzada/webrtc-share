@@ -1,5 +1,5 @@
-import { Button, TextInput } from "@mantine/core";
-import { Link, createLazyFileRoute } from "@tanstack/react-router";
+import { Button, Input } from "@mantine/core";
+import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 export const Route = createLazyFileRoute("/")({
@@ -8,29 +8,38 @@ export const Route = createLazyFileRoute("/")({
 
 function Index() {
   const [roomName, setRoomName] = useState("");
+  const navigate = useNavigate();
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-      }}
-    >
-      <TextInput
-        size="sm"
-        value={roomName}
-        onChange={(e) => setRoomName(e.currentTarget.value)}
-      />
+    <>
+      <div className="flex flex-col gap-2 text-center">
+        <h1 className="text-3xl font-bold tracking-tight lg:text-5xl xl:text-6xl">
+          Share files made easy.
+        </h1>
+        <p className=" text-gray-600 dark:text-gray-400">
+          Peer-to-peer file sharing using WebRTC.
+        </p>
+      </div>
 
-      <Link
-        to="/$roomName"
-        params={{
-          roomName,
+      <form
+        className="flex flex-col justify-center gap-4 mt-8 lg:gap-6 lg:flex-row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          navigate({ to: "/$roomName", params: { roomName } });
         }}
       >
-        <Button color="blue" fullWidth mt="md" radius="md">
-          Join
-        </Button>
-      </Link>
-    </form>
+        <Input
+          className="w-full lg:w-64"
+          placeholder="Enter room name or link"
+          value={roomName}
+          onChange={(e) => setRoomName(e.currentTarget.value)}
+        />
+        <div className="w-full lg:w-1/5">
+          <Button fullWidth type="submit">
+            Join
+          </Button>
+        </div>
+      </form>
+    </>
   );
 }

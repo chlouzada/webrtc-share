@@ -16,7 +16,11 @@ const router = createRouter({ routeTree, history });
 
 ReactDOM.createRoot(document.getElementById("app")!).render(
   <React.StrictMode>
-    <MantineProvider>
+    <MantineProvider
+      theme={{
+        primaryColor: "teal",
+      }}
+    >
       <RouterProvider router={router} />
     </MantineProvider>
   </React.StrictMode>
