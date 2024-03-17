@@ -15,7 +15,7 @@ function Index() {
     <>
       <div className="flex flex-col gap-2 text-center">
         <h1 className="text-3xl font-bold tracking-tight lg:text-5xl xl:text-6xl">
-          Share files made easy.
+          File sharing made easy.
         </h1>
         <p className=" text-gray-600 dark:text-gray-400">
           Peer-to-peer file sharing using WebRTC.
