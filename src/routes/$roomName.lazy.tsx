@@ -7,9 +7,10 @@ import {
   Text,
   Table,
   rem,
-  Badge,
   ActionIcon,
   RingProgress,
+  Card,
+  Loader,
 } from "@mantine/core";
 import { Dropzone, DropzoneProps, FileWithPath } from "@mantine/dropzone";
 import {
@@ -53,7 +54,7 @@ export function Room() {
       const room = joinRoom(
         {
           appId: import.meta.env.VITE_APP_FB_RTDB_URL,
-          rootPath: '__webrtc-share__/rooms'
+          rootPath: "__webrtc-share__/rooms",
         },
         `${import.meta.env.VITE_APP_ROOM_NAME_PREFIX}-${roomName}`
       );
@@ -105,12 +106,18 @@ const Joined = () => {
 
   return (
     <>
-      <Badge size="xl" color={peerId ? "green" : "red"}>
-        {peerId ? "CONNECTED" : "DISCONNECTED"}
-      </Badge>
-
-      <FileDropzone />
-      <FileList />
+      {peerId === undefined && (
+        <div className="flex flex-col items-center gap-3">
+          <h1 className="font-bold text-xl">Waiting for peer to join...</h1>
+          <Loader type="dots" />
+        </div>
+      )}
+      {peerId !== undefined && (
+        <>
+          <FileDropzone />
+          <FileList />
+        </>
+      )}
     </>
   );
 };
@@ -125,6 +132,7 @@ const useFileStore = create<{
   };
   setRemoteFiles: (files: File[]) => void;
   addLocalFiles: (files: FileWithPath[]) => void;
+  removeLocalFile: (index: number) => void;
 }>((set) => ({
   files: {
     local: [],
@@ -136,65 +144,76 @@ const useFileStore = create<{
     set((state) => ({
       files: { ...state.files, local: [...state.files.local, ...files] },
     })),
+  removeLocalFile: (index) => {
+    set((state) => ({
+      files: {
+        ...state.files,
+        local: state.files.local.filter((_, i) => i !== index),
+      },
+    }));
+  },
 }));
 
 function FileDropzone(props: Partial<DropzoneProps>) {
   const addLocalFiles = useFileStore((state) => state.addLocalFiles);
 
   return (
-    <Dropzone
-      onDrop={addLocalFiles}
-      onReject={(files) => console.log("rejected files", files)}
-      // maxSize={5 * 1024 ** 2}
-      {...props}
-    >
-      <Group
-        justify="center"
-        gap="xl"
-        mih={220}
-        style={{ pointerEvents: "none" }}
+    <Card shadow="lg" m={8}>
+      <Dropzone
+        px={24}
+        onDrop={addLocalFiles}
+        onReject={(files) => console.log("rejected files", files)}
+        // maxSize={5 * 1024 ** 2}
+        {...props}
       >
-        <Dropzone.Accept>
-          <IconUpload
-            style={{
-              width: rem(52),
-              height: rem(52),
-              color: "var(--mantine-color-blue-6)",
-            }}
-            stroke={1.5}
-          />
-        </Dropzone.Accept>
-        <Dropzone.Reject>
-          <IconX
-            style={{
-              width: rem(52),
-              height: rem(52),
-              color: "var(--mantine-color-red-6)",
-            }}
-            stroke={1.5}
-          />
-        </Dropzone.Reject>
-        <Dropzone.Idle>
-          <IconPhoto
-            style={{
-              width: rem(52),
-              height: rem(52),
-              color: "var(--mantine-color-dimmed)",
-            }}
-            stroke={1.5}
-          />
-        </Dropzone.Idle>
+        <Group
+          justify="center"
+          gap="xl"
+          mih={220}
+          style={{ pointerEvents: "none" }}
+        >
+          <Dropzone.Accept>
+            <IconUpload
+              style={{
+                width: rem(52),
+                height: rem(52),
+                color: "var(--mantine-color-blue-6)",
+              }}
+              stroke={1.5}
+            />
+          </Dropzone.Accept>
+          <Dropzone.Reject>
+            <IconX
+              style={{
+                width: rem(52),
+                height: rem(52),
+                color: "var(--mantine-color-red-6)",
+              }}
+              stroke={1.5}
+            />
+          </Dropzone.Reject>
+          <Dropzone.Idle>
+            <IconPhoto
+              style={{
+                width: rem(52),
+                height: rem(52),
+                color: "var(--mantine-color-dimmed)",
+              }}
+              stroke={1.5}
+            />
+          </Dropzone.Idle>
 
-        <div>
-          <Text size="xl" inline>
-            Drag images here or click to select files
-          </Text>
-          <Text size="sm" c="dimmed" inline mt={7}>
-            Attach as many files as you like, each file should not exceed 5mb
-          </Text>
-        </div>
-      </Group>
-    </Dropzone>
+          <div>
+            <Text size="xl" inline>
+              Drag images here or click to select files
+            </Text>
+            <Text size="sm" c="dimmed" inline mt={7}>
+              Attach as many files as you like, each file should not exceed 5mb
+            </Text>
+          </div>
+        </Group>
+      </Dropzone>
+    </Card>
   );
 }
 
@@ -229,7 +248,7 @@ const useSync = () => {
 function FileList() {
   const TABLE_HEADERS = ["File Name", "Extension", "Size", ""] as const;
 
-  const files = useFileStore((state) => state.files);
+  const { files, removeLocalFile } = useFileStore();
 
   const row = (
     map: Record<(typeof TABLE_HEADERS)[number] & string, string | JSX.Element>
@@ -244,7 +263,20 @@ function FileList() {
         "File Name": file.name.split(".")[0]!,
         Extension: (file.name.split(".")[1] ?? "-").toUpperCase(),
         Size: `${Math.ceil(file.size / 1024)} KB`,
-        "": "TODO: UPDATE | DELETE",
+
+        // TODO: update feature
+        // TODO: if a file requested by peer, remove option to delete
+        // TODO: show a progress bar if file is being downloaded
+        "": (
+          <ActionIcon
+            size={30}
+            variant="transparent"
+            color="red"
+            onClick={() => removeLocalFile(idx)}
+          >
+            <IconX size={18} />
+          </ActionIcon>
+        ),
       })}
     </Table.Tr>
   ));
@@ -371,14 +403,8 @@ const DownloadButton = ({ fileIndex }: { fileIndex: number }) => {
   return (
     <>
       {isDownloaded && (
-        <ActionIcon size={30}>
-          <IconDeviceFloppy
-            onClick={() => {
-              alert("DOWNLOADED");
-              save(fileIndex);
-            }}
-            size={22}
-          />
+        <ActionIcon size={30} variant="transparent">
+          <IconDeviceFloppy onClick={() => save(fileIndex)} size={22} />
         </ActionIcon>
       )}
       {isDownloading && (
@@ -394,7 +420,7 @@ const DownloadButton = ({ fileIndex }: { fileIndex: number }) => {
         />
       )}
       {isWaiting && (
-        <ActionIcon size={30}>
+        <ActionIcon size={30} variant="transparent">
           <IconDownload size={18} onClick={() => download(fileIndex)} />
         </ActionIcon>
       )}
