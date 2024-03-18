@@ -11,9 +11,14 @@ import {
   RingProgress,
   Card,
   Loader,
+  TextInput,
+  CopyButton,
+  Button,
+  Tooltip,
 } from "@mantine/core";
 import { Dropzone, DropzoneProps, FileWithPath } from "@mantine/dropzone";
 import {
+  IconCopy,
   IconDeviceFloppy,
   IconDownload,
   IconPhoto,
@@ -45,6 +50,9 @@ const useRoomStore = create<{
 export function Room() {
   const roomName = Route.useParams().roomName.toLowerCase();
 
+  const [opened, setOpened] = useState(false);
+
+  const peerId = usePeerStore((state) => state.peerId);
   const setPeerId = usePeerStore((state) => state.setPeerId);
   const { setRoom, room } = useRoomStore();
 
@@ -91,33 +99,54 @@ export function Room() {
     return () => joinedRoom.leave();
   }, [roomName]);
 
-  if (!room) {
-    return <></>;
+  if (!room || peerId === undefined) {
+    return (
+      <div className="flex flex-col items-center gap-3">
+        <h1 className="font-bold text-xl">Share this link with a peer.</h1>
+        <div className="flex gap-2 items-center">
+          <TextInput readOnly value={roomName} />
+
+          <CopyButton value={`${window.location.origin}/#/${roomName}`}>
+            {({ copied, copy }) => (
+              <Tooltip
+                label="Copied!"
+                position="right"
+                withArrow
+                opened={opened}
+              >
+                <ActionIcon
+                  variant="transparent"
+                  onClick={() => {
+                    copy();
+                    setOpened(true);
+                    setTimeout(() => setOpened(false), 1000);
+                  }}
+                >
+                  <IconCopy {...(copied && { color: "gray" })} />
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </CopyButton>
+        </div>
+        <h2 className=" font-bold text-sm text-gray-500 mt-3">
+          Waiting for peer to join...
+        </h2>
+        <Loader type="dots" h={12} size={24} />
+      </div>
+    );
   }
 
   return <Joined />;
 }
 
 const Joined = () => {
-  const peerId = usePeerStore((state) => state.peerId);
-
   useSync();
   useDownload();
 
   return (
     <>
-      {peerId === undefined && (
-        <div className="flex flex-col items-center gap-3">
-          <h1 className="font-bold text-xl">Waiting for peer to join...</h1>
-          <Loader type="dots" />
-        </div>
-      )}
-      {peerId !== undefined && (
-        <>
-          <FileDropzone />
-          <FileList />
-        </>
-      )}
+      <FileDropzone />
+      <FileList />
     </>
   );
 };
