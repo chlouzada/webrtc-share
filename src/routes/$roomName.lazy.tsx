@@ -13,7 +13,6 @@ import {
   Loader,
   TextInput,
   CopyButton,
-  Button,
   Tooltip,
 } from "@mantine/core";
 import { Dropzone, DropzoneProps, FileWithPath } from "@mantine/dropzone";
@@ -252,7 +251,12 @@ const useSync = () => {
   const peerId = usePeerStore((state) => state.peerId);
   const setRemoteFiles = useFileStore((state) => state.setRemoteFiles);
 
-  const [sendLocalFiles, onLocalFiles] = room.makeAction("local-files");
+  const [sendLocalFiles, onLocalFiles] = room.makeAction<
+    {
+      name: string;
+      size: number;
+    }[]
+  >("local-files");
 
   useEffect(() => {
     sendLocalFiles(
@@ -355,10 +359,10 @@ const useDownload = () => {
     [K in number]: Blob;
   }>({});
 
-  const [requestFile, onRequestFile] = room.makeAction("request-dl");
+  const [requestFile, onRequestFile] = room.makeAction<number>("request-dl");
 
   const [sendDownload, onDownload, onDownloadProgress] =
-    room.makeAction("download");
+    room.makeAction<ArrayBuffer>("download");
 
   useEffect(() => {
     if (peerId === undefined) return;
@@ -382,7 +386,7 @@ const useDownload = () => {
 
     onDownload((data, peerId, metadata: any) => {
       console.log(`got a buffer from ${peerId}`);
-      const blob = new Blob([data as ArrayBuffer], {
+      const blob = new Blob([data], {
         type: "application/octet-stream",
       });
       setBlobs((prev) => ({ ...prev, [metadata.index]: blob }));
