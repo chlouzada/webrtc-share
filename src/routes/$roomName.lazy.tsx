@@ -98,36 +98,31 @@ export function Room() {
     return () => joinedRoom.leave();
   }, [roomName]);
 
+  const link = `${window.location.origin}/#/${roomName}`;
+
   if (!room || peerId === undefined) {
     return (
       <div className="flex flex-col items-center gap-3">
         <h1 className="font-bold text-xl">Share this link with a peer.</h1>
         <div className="flex gap-2 items-center">
-          <TextInput readOnly value={roomName} />
+          <p>{link}</p>
 
-          <CopyButton value={`${window.location.origin}/#/${roomName}`}>
+          <CopyButton value={link}>
             {({ copied, copy }) => (
               <Tooltip
                 label="Copied!"
                 position="right"
                 withArrow
-                opened={opened}
+                opened={copied}
               >
-                <ActionIcon
-                  variant="transparent"
-                  onClick={() => {
-                    copy();
-                    setOpened(true);
-                    setTimeout(() => setOpened(false), 1000);
-                  }}
-                >
+                <ActionIcon variant="transparent" onClick={copy}>
                   <IconCopy {...(copied && { color: "gray" })} />
                 </ActionIcon>
               </Tooltip>
             )}
           </CopyButton>
         </div>
-        <h2 className=" font-bold text-sm text-gray-500 mt-3">
+        <h2 className="font-bold text-sm text-gray-500 mt-3">
           Waiting for peer to join...
         </h2>
         <Loader type="dots" h={12} size={24} />
