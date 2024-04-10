@@ -49,8 +49,6 @@ const useRoomStore = create<{
 export function Room() {
   const roomName = Route.useParams().roomName.toLowerCase();
 
-  const [opened, setOpened] = useState(false);
-
   const peerId = usePeerStore((state) => state.peerId);
   const setPeerId = usePeerStore((state) => state.setPeerId);
   const { setRoom, room } = useRoomStore();
