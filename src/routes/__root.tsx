@@ -26,16 +26,18 @@ const Header = () => {
 };
 
 const Footer = () => {
-  return <footer className="bg-gray-900 p-12 w-full"></footer>;
+  return <footer className="bg-gray-100 p-4 w-full border-t text-center">
+    {/* TODO: github link <Text size="sm" c="dimmed"></Text> */}
+  </footer>;
 };
 
 function Layout() {
   return (
-    <div className="flex flex-col h-screen justify-between">
+    <div className="flex flex-col min-h-screen">
       <Header />
-      <div className="max-w-4xl mx-auto ">
+      <main className="flex-1 flex items-center justify-center">
         <Outlet />
-      </div>
+      </main>
       <Footer />
     </div>
   );

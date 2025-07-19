@@ -4,7 +4,7 @@ import { IconCheck, IconX, IconAlertTriangle, IconInfoCircle } from '@tabler/ico
 export const useNotifications = () => {
   const showSuccess = (message: string, title?: string) => {
     notifications.show({
-      title: title || 'Sucesso',
+      title: title || 'Success',
       message,
       color: 'teal',
       icon: <IconCheck size={16} />,
@@ -13,7 +13,7 @@ export const useNotifications = () => {
 
   const showError = (message: string, title?: string) => {
     notifications.show({
-      title: title || 'Erro',
+      title: title || 'Error',
       message,
       color: 'red',
       icon: <IconX size={16} />,
@@ -22,7 +22,7 @@ export const useNotifications = () => {
 
   const showWarning = (message: string, title?: string) => {
     notifications.show({
-      title: title || 'Atenção',
+      title: title || 'Warning',
       message,
       color: 'yellow',
       icon: <IconAlertTriangle size={16} />,
@@ -31,7 +31,7 @@ export const useNotifications = () => {
 
   const showInfo = (message: string, title?: string) => {
     notifications.show({
-      title: title || 'Informação',
+      title: title || 'Information',
       message,
       color: 'blue',
       icon: <IconInfoCircle size={16} />,

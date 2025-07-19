@@ -5,23 +5,27 @@ import { joinRoom } from "trystero/firebase";
 import {
   Group,
   Text,
-  Table,
   rem,
   ActionIcon,
   RingProgress,
-  Card,
   Loader,
   CopyButton,
   Tooltip,
+  Badge,
+  Stack,
+  Title,
+  Paper,
 } from "@mantine/core";
 import { Dropzone, DropzoneProps, FileWithPath } from "@mantine/dropzone";
 import {
   IconCopy,
   IconDeviceFloppy,
   IconDownload,
-  IconPhoto,
   IconUpload,
   IconX,
+  IconCloudUpload,
+  IconCloudDown,
+  IconFileText,
 } from "@tabler/icons-react";
 import { create } from "zustand";
 import { useNotifications } from "../hooks/useNotifications";
@@ -69,18 +73,18 @@ export function Room() {
         const peers = room.getPeers();
 
         if (Object.keys(peers).length > 1) {
-          showError("Esta sala suporta apenas 2 pessoas", "Sala lotada");
+          showError("Room supports only 2 people", "Room full");
           throw new Error("ROOM IS MADE FOR 2 PEOPLE MAX");
         }
 
         console.log(`${peerId} joined`);
-        showInfo(`Usuário conectado: ${peerId.substring(0, 8)}...`, "Nova conexão");
+        showInfo(`User connected: ${peerId.substring(0, 8)}...`, "New connection");
         setPeerId(peerId);
       });
 
       room.onPeerLeave((peerId) => {
         console.log(`${peerId} left`);
-        showInfo(`Usuário desconectado: ${peerId.substring(0, 8)}...`, "Desconexão");
+        showInfo(`User disconnected: ${peerId.substring(0, 8)}...`, "Disconnection");
         setPeerId(undefined);
       });
 
@@ -90,11 +94,6 @@ export function Room() {
     const joinedRoom = join();
 
     setRoom(joinedRoom);
-
-    // const setIntervalId = setInterval(() => {
-    //   console.log("peers", joinedRoom.getPeers());
-    // }, 500);
-
     return () => joinedRoom.leave();
   }, [roomName]);
 
@@ -102,30 +101,51 @@ export function Room() {
 
   if (!room || peerId === undefined) {
     return (
-      <div className="flex flex-col items-center gap-3">
-        <h1 className="font-bold text-xl">Share this link with a peer.</h1>
-        <div className="flex gap-2 items-center">
-          <p>{link}</p>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Paper shadow="md" radius="lg" p="xl" maw={500} mx="auto">
+          <Stack align="center" gap="lg">
+            <div className="text-center">
+              <Title order={2} mb="sm">
+                Share this link
+              </Title>
+              <Text c="dimmed" size="sm">
+                Send the link below for someone to connect to your room
+              </Text>
+            </div>
 
-          <CopyButton value={link}>
-            {({ copied, copy }) => (
-              <Tooltip
-                label="Copied!"
-                position="right"
-                withArrow
-                opened={copied}
-              >
-                <ActionIcon variant="transparent" onClick={copy}>
-                  <IconCopy {...(copied && { color: "gray" })} />
-                </ActionIcon>
-              </Tooltip>
-            )}
-          </CopyButton>
-        </div>
-        <h2 className="font-bold text-sm text-gray-500 mt-3">
-          Waiting for peer to join...
-        </h2>
-        <Loader type="dots" h={12} size={24} />
+            <Paper withBorder p="md" radius="md" w="100%">
+              <Group justify="space-between" wrap="nowrap">
+                <Text size="sm" style={{ wordBreak: "break-all" }} flex={1}>
+                  {link}
+                </Text>
+                <CopyButton value={link}>
+                  {({ copied, copy }) => (
+                    <Tooltip
+                      label={copied ? "Copied!" : "Copy link"}
+                      position="left"
+                      withArrow
+                    >
+                      <ActionIcon 
+                        variant={copied ? "filled" : "subtle"}
+                        color={copied ? "teal" : "blue"}
+                        onClick={copy}
+                      >
+                        <IconCopy size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                </CopyButton>
+              </Group>
+            </Paper>
+
+            <Stack align="center" gap="sm">
+              <Text fw={500} c="dimmed">
+                Waiting for connection...
+              </Text>
+              <Loader type="dots" size="md" />
+            </Stack>
+          </Stack>
+        </Paper>
       </div>
     );
   }
@@ -138,10 +158,13 @@ const Joined = () => {
   useDownload();
 
   return (
-    <>
+    <div className="w-full max-w-7xl mx-auto px-4 py-2">
       <FileDropzone />
-      <FileList />
-    </>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4 w-full">
+        <MyFiles />
+        <PeerFiles />
+      </div>
+    </div>
   );
 };
 
@@ -182,32 +205,31 @@ function FileDropzone(props: Partial<DropzoneProps>) {
   const { showSuccess, showError } = useNotifications();
 
   return (
-    <Card shadow="lg" m={8}>
+    <Paper shadow="sm" radius="lg" p="md" withBorder>
       <Dropzone
-        px={24}
+        radius="md"
         onDrop={(files) => {
           addLocalFiles(files);
-          showSuccess(`${files.length} arquivo(s) adicionado(s) com sucesso!`);
+          showSuccess(`${files.length} file(s) added successfully!`);
         }}
         onReject={(files) => {
           console.log("rejected files", files);
-          showError(`${files.length} arquivo(s) rejeitado(s). Verifique o tipo ou tamanho.`);
+          showError(`${files.length} file(s) rejected. Check type or size.`);
         }}
-        // maxSize={5 * 1024 ** 2}
         {...props}
       >
         <Group
           justify="center"
-          gap="xl"
-          mih={220}
+          gap="md"
+          mih={90}
           style={{ pointerEvents: "none" }}
         >
           <Dropzone.Accept>
             <IconUpload
               style={{
-                width: rem(52),
-                height: rem(52),
-                color: "var(--mantine-color-blue-6)",
+                width: rem(36),
+                height: rem(36),
+                color: "var(--mantine-color-teal-6)",
               }}
               stroke={1.5}
             />
@@ -215,35 +237,35 @@ function FileDropzone(props: Partial<DropzoneProps>) {
           <Dropzone.Reject>
             <IconX
               style={{
-                width: rem(52),
-                height: rem(52),
+                width: rem(36),
+                height: rem(36),
                 color: "var(--mantine-color-red-6)",
               }}
               stroke={1.5}
             />
           </Dropzone.Reject>
           <Dropzone.Idle>
-            <IconPhoto
+            <IconCloudUpload
               style={{
-                width: rem(52),
-                height: rem(52),
-                color: "var(--mantine-color-dimmed)",
+                width: rem(36),
+                height: rem(36),
+                color: "var(--mantine-color-gray-6)",
               }}
               stroke={1.5}
             />
           </Dropzone.Idle>
 
-          <div>
-            <Text size="xl" inline>
-              Drag images here or click to select files
+          <Stack align="center" gap="xs">
+            <Text size="md" fw={500}>
+              Drag files or click to select
             </Text>
-            <Text size="sm" c="dimmed" inline mt={7}>
-              Attach as many files as you like, each file should not exceed 5mb
+            <Text size="xs" c="dimmed">
+              no size limit
             </Text>
-          </div>
+          </Stack>
         </Group>
       </Dropzone>
-    </Card>
+    </Paper>
   );
 }
 
@@ -280,73 +302,102 @@ const useSync = () => {
   }, [peerId, files.local]);
 };
 
-function FileList() {
-  const TABLE_HEADERS = ["File Name", "Extension", "Size", ""] as const;
-
+const MyFiles = () => {
   const { files, removeLocalFile } = useFileStore();
 
-  const row = (
-    map: Record<(typeof TABLE_HEADERS)[number] & string, string | JSX.Element>
-  ) =>
-    Object.values(TABLE_HEADERS).map((header) => (
-      <Table.Td key={header}>{map[header]}</Table.Td>
-    ));
+  return (
+    <Paper shadow="sm" radius="md" p="md" withBorder className="h-fit">
+      <Group mb="md">
+        <IconCloudUpload size={20} color="var(--mantine-color-teal-6)" />
+        <Title order={4}>My Files</Title>
+        <Badge color="teal" variant="light">
+          {files.local.length}
+        </Badge>
+      </Group>
+      
+      {files.local.length === 0 ? (
+        <Text c="dimmed" ta="center" py="xl">
+          No files sent yet.
+          <br />
+          Drag files above to share.
+        </Text>
+      ) : (
+        <Stack gap="xs">
+          {files.local.map((file, idx) => (
+            <Paper key={idx} p="sm" withBorder radius="sm" bg="var(--mantine-color-teal-0)">
+              <Group justify="space-between">
+                <Group gap="sm">
+                  <IconFileText size={16} />
+                  <div>
+                    <Text size="sm" fw={500}>
+                      {file.name}
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      {Math.ceil(file.size / 1024)} KB
+                    </Text>
+                  </div>
+                </Group>
+                <ActionIcon
+                  size="sm"
+                  variant="subtle"
+                  color="red"
+                  onClick={() => removeLocalFile(idx)}
+                >
+                  <IconX size={14} />
+                </ActionIcon>
+              </Group>
+            </Paper>
+          ))}
+        </Stack>
+      )}
+    </Paper>
+  );
+};
 
-  const rows = files.local.map((file, idx) => (
-    <Table.Tr key={`tr-${idx}`}>
-      {row({
-        "File Name": file.name.split(".")[0]!,
-        Extension: (file.name.split(".")[1] ?? "-").toUpperCase(),
-        Size: `${Math.ceil(file.size / 1024)} KB`,
-
-        // TODO: update feature
-        // TODO: if a file requested by peer, remove option to delete
-        // TODO: show a progress bar if file is being downloaded
-        "": (
-          <ActionIcon
-            size={30}
-            variant="transparent"
-            color="red"
-            onClick={() => removeLocalFile(idx)}
-          >
-            <IconX size={18} />
-          </ActionIcon>
-        ),
-      })}
-    </Table.Tr>
-  ));
-
-  const rows2 = files.remote.map((file, idx) => (
-    <Table.Tr key={`tr-${idx}-2`}>
-      {row({
-        "File Name": file.name.split(".")[0]!,
-        Extension: (file.name.split(".")[1] ?? "-").toUpperCase(),
-        Size: `${Math.ceil(file.size / 1024)} KB`,
-        "": <DownloadButton fileIndex={idx} />,
-      })}
-    </Table.Tr>
-  ));
-
-  if (files.remote.length === 0 && files.local.length === 0) {
-    return <></>;
-  }
+const PeerFiles = () => {
+  const { files } = useFileStore();
 
   return (
-    <Table>
-      <Table.Thead>
-        <Table.Tr>
-          {TABLE_HEADERS.map((header, idx) => (
-            <Table.Th key={`th-${idx}`}>{header}</Table.Th>
+    <Paper shadow="sm" radius="md" p="md" withBorder className="h-fit">
+      <Group mb="md">
+        <IconCloudDown size={20} color="var(--mantine-color-blue-6)" />
+        <Title order={4}>Peer Files</Title>
+        <Badge color="blue" variant="light">
+          {files.remote.length}
+        </Badge>
+      </Group>
+      
+      {files.remote.length === 0 ? (
+        <Text c="dimmed" ta="center" py="xl">
+          Waiting for peer files...
+          <br />
+          Shared files will appear here.
+        </Text>
+      ) : (
+        <Stack gap="xs">
+          {files.remote.map((file, idx) => (
+            <Paper key={idx} p="sm" withBorder radius="sm" bg="var(--mantine-color-blue-0)">
+              <Group justify="space-between">
+                <Group gap="sm">
+                  <IconFileText size={16} />
+                  <div>
+                    <Text size="sm" fw={500}>
+                      {file.name}
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      {Math.ceil(file.size / 1024)} KB
+                    </Text>
+                  </div>
+                </Group>
+                <DownloadButton fileIndex={idx} />
+              </Group>
+            </Paper>
           ))}
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {rows}
-        {rows2}
-      </Table.Tbody>
-    </Table>
+        </Stack>
+      )}
+    </Paper>
   );
-}
+};
 
 const useDownload = () => {
   const room = useRoomStore((state) => state.room);
@@ -376,7 +427,7 @@ const useDownload = () => {
       const file = files.local[Number(index)];
 
       if (!file) {
-        showError(`Arquivo não encontrado no índice ${index}`);
+        showError(`File not found at index ${index}`);
         throw new Error(`File not found at index ${index}`);
       }
 
@@ -387,15 +438,17 @@ const useDownload = () => {
       });
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onDownload((data, peerId, metadata: any) => {
       console.log(`got a buffer from ${peerId}`);
       const blob = new Blob([data], {
         type: "application/octet-stream",
       });
       setBlobs((prev) => ({ ...prev, [metadata.index]: blob }));
-      showSuccess(`Download concluído: ${files.remote[metadata.index]?.name || 'arquivo'}`);
+      showSuccess(`Download completed: ${files.remote[metadata.index]?.name || 'file'}`);
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onDownloadProgress((percent, peerId, metadata: any) => {
       console.log(`${percent * 100}% done receiving from ${peerId}`, metadata);
       setProgress((prev) => ({
@@ -408,14 +461,14 @@ const useDownload = () => {
   return {
     download: async (index: number) => {
       requestFile(index, peerId);
-      showInfo(`Iniciando download: ${files.remote[index]?.name || 'arquivo'}`);
+      showInfo(`Starting download: ${files.remote[index]?.name || 'file'}`);
     },
     progress: progress,
     save: (index: number) => {
       const blob = blobs[index];
 
       if (!blob) {
-        showError(`Arquivo não disponível para salvamento`);
+        showError(`File not available for saving`);
         throw new Error(`Blob not found at index ${index}`);
       }
 
@@ -425,7 +478,7 @@ const useDownload = () => {
       a.download = files.remote[index]?.name || "default";
       a.click();
       URL.revokeObjectURL(url);
-      showSuccess(`Arquivo salvo: ${files.remote[index]?.name || 'arquivo'}`);
+      showSuccess(`File saved: ${files.remote[index]?.name || 'file'}`);
     },
   };
 };
@@ -437,32 +490,43 @@ const DownloadButton = ({ fileIndex }: { fileIndex: number }) => {
 
   const isDownloaded = percentage === 100;
   const isDownloading = percentage && percentage > 0 && percentage < 100;
-  const isWaiting = percentage === undefined;
+
+  if (isDownloaded) {
+    return (
+      <ActionIcon
+        size="sm"
+        variant="filled"
+        color="green"
+        onClick={() => save(fileIndex)}
+      >
+        <IconDeviceFloppy size={14} />
+      </ActionIcon>
+    );
+  }
+
+  if (isDownloading) {
+    return (
+      <RingProgress
+        size={24}
+        thickness={3}
+        sections={[{ value: percentage, color: "blue" }]}
+        label={
+          <Text size="xs" ta="center">
+            {Math.round(percentage)}%
+          </Text>
+        }
+      />
+    );
+  }
 
   return (
-    <>
-      {isDownloaded && (
-        <ActionIcon size={30} variant="transparent">
-          <IconDeviceFloppy onClick={() => save(fileIndex)} size={22} />
-        </ActionIcon>
-      )}
-      {isDownloading && (
-        <RingProgress
-          size={30}
-          thickness={2}
-          sections={[{ value: percentage, color: "teal" }]}
-          label={
-            <div className="flex justify-center p-1">
-              <IconDownload size={16} />
-            </div>
-          }
-        />
-      )}
-      {isWaiting && (
-        <ActionIcon size={30} variant="transparent">
-          <IconDownload size={18} onClick={() => download(fileIndex)} />
-        </ActionIcon>
-      )}
-    </>
+    <ActionIcon
+      size="sm"
+      variant="subtle"
+      color="blue"
+      onClick={() => download(fileIndex)}
+    >
+      <IconDownload size={14} />
+    </ActionIcon>
   );
 };
