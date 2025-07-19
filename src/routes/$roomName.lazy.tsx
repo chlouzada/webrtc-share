@@ -95,6 +95,7 @@ export function Room() {
 
     setRoom(joinedRoom);
     return () => joinedRoom.leave();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomName]);
 
   const link = `${window.location.origin}/#/${roomName}`;
@@ -290,6 +291,7 @@ const useSync = () => {
       })),
       peerId
     );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files.local]);
 
   useEffect(() => {
@@ -299,6 +301,7 @@ const useSync = () => {
       console.log(`got a file from ${peerId}`, data);
       setRemoteFiles(data as unknown as File[]);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerId, files.local]);
 };
 
@@ -456,6 +459,7 @@ const useDownload = () => {
         [metadata.index]: percent * 100,
       }));
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerId, files.local, files.remote]);
 
   return {
