@@ -6,10 +6,12 @@ import {
   createHashHistory,
 } from "@tanstack/react-router";
 import { MantineProvider } from "@mantine/core";
+import { Notifications } from "@mantine/notifications";
 import { routeTree } from "./routeTree.gen";
 
 import "./index.css";
 import "@mantine/core/styles.css";
+import "@mantine/notifications/styles.css";
 
 const history = createHashHistory();
 const router = createRouter({ routeTree, history });
@@ -21,6 +23,7 @@ ReactDOM.createRoot(document.getElementById("app")!).render(
         primaryColor: "teal",
       }}
     >
+      <Notifications />
       <RouterProvider router={router} />
     </MantineProvider>
   </React.StrictMode>

@@ -11,7 +11,6 @@ import {
   RingProgress,
   Card,
   Loader,
-  TextInput,
   CopyButton,
   Tooltip,
 } from "@mantine/core";
@@ -25,6 +24,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { create } from "zustand";
+import { useNotifications } from "../hooks/useNotifications";
 
 export const Route = createLazyFileRoute("/$roomName")({
   component: Room,
@@ -48,6 +48,7 @@ const useRoomStore = create<{
 
 export function Room() {
   const roomName = Route.useParams().roomName.toLowerCase();
+  const { showError, showInfo } = useNotifications();
 
   const peerId = usePeerStore((state) => state.peerId);
   const setPeerId = usePeerStore((state) => state.setPeerId);
@@ -68,17 +69,18 @@ export function Room() {
         const peers = room.getPeers();
 
         if (Object.keys(peers).length > 1) {
-          // TODO:
-          alert("ROOM IS MADE FOR 2 PEOPLE MAX");
+          showError("Esta sala suporta apenas 2 pessoas", "Sala lotada");
           throw new Error("ROOM IS MADE FOR 2 PEOPLE MAX");
         }
 
         console.log(`${peerId} joined`);
+        showInfo(`Usuário conectado: ${peerId.substring(0, 8)}...`, "Nova conexão");
         setPeerId(peerId);
       });
 
       room.onPeerLeave((peerId) => {
         console.log(`${peerId} left`);
+        showInfo(`Usuário desconectado: ${peerId.substring(0, 8)}...`, "Desconexão");
         setPeerId(undefined);
       });
 
@@ -177,13 +179,20 @@ const useFileStore = create<{
 
 function FileDropzone(props: Partial<DropzoneProps>) {
   const addLocalFiles = useFileStore((state) => state.addLocalFiles);
+  const { showSuccess, showError } = useNotifications();
 
   return (
     <Card shadow="lg" m={8}>
       <Dropzone
         px={24}
-        onDrop={addLocalFiles}
-        onReject={(files) => console.log("rejected files", files)}
+        onDrop={(files) => {
+          addLocalFiles(files);
+          showSuccess(`${files.length} arquivo(s) adicionado(s) com sucesso!`);
+        }}
+        onReject={(files) => {
+          console.log("rejected files", files);
+          showError(`${files.length} arquivo(s) rejeitado(s). Verifique o tipo ou tamanho.`);
+        }}
         // maxSize={5 * 1024 ** 2}
         {...props}
       >
@@ -343,6 +352,7 @@ const useDownload = () => {
   const room = useRoomStore((state) => state.room);
   const files = useFileStore((state) => state.files);
   const peerId = usePeerStore((state) => state.peerId);
+  const { showSuccess, showError, showInfo } = useNotifications();
 
   const [progress, setProgress] = useState<{
     [K in number]: number;
@@ -366,7 +376,7 @@ const useDownload = () => {
       const file = files.local[Number(index)];
 
       if (!file) {
-        // TODO: alert user
+        showError(`Arquivo não encontrado no índice ${index}`);
         throw new Error(`File not found at index ${index}`);
       }
 
@@ -383,6 +393,7 @@ const useDownload = () => {
         type: "application/octet-stream",
       });
       setBlobs((prev) => ({ ...prev, [metadata.index]: blob }));
+      showSuccess(`Download concluído: ${files.remote[metadata.index]?.name || 'arquivo'}`);
     });
 
     onDownloadProgress((percent, peerId, metadata: any) => {
@@ -397,13 +408,14 @@ const useDownload = () => {
   return {
     download: async (index: number) => {
       requestFile(index, peerId);
+      showInfo(`Iniciando download: ${files.remote[index]?.name || 'arquivo'}`);
     },
     progress: progress,
     save: (index: number) => {
       const blob = blobs[index];
 
       if (!blob) {
-        //TODO: alert user
+        showError(`Arquivo não disponível para salvamento`);
         throw new Error(`Blob not found at index ${index}`);
       }
 
@@ -413,6 +425,7 @@ const useDownload = () => {
       a.download = files.remote[index]?.name || "default";
       a.click();
       URL.revokeObjectURL(url);
+      showSuccess(`Arquivo salvo: ${files.remote[index]?.name || 'arquivo'}`);
     },
   };
 };
