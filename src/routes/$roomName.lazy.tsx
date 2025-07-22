@@ -98,7 +98,7 @@ export function Room() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomName]);
 
-  const link = `${window.location.origin}/#/${roomName}`;
+  const link = document.location.href;
 
   if (!room || peerId === undefined) {
     return (
