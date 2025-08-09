@@ -500,7 +500,7 @@ const useDownload = () => {
 };
 
 const DownloadButton = ({ fileIndex }: { fileIndex: number }) => {
-  const { download, progress, save } = useDownload();
+  const { download, progress } = useDownload();
 
   const percentage = progress[fileIndex];
 
