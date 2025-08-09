@@ -448,7 +448,19 @@ const useDownload = () => {
         type: "application/octet-stream",
       });
       setBlobs((prev) => ({ ...prev, [metadata.index]: blob }));
-      showSuccess(`Download completed: ${files.remote[metadata.index]?.name || 'file'}`);
+      
+      // Auto-save the file
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = files.remote[metadata.index]?.name || "default";
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showSuccess(`File downloaded and saved: ${files.remote[metadata.index]?.name || 'file'}`);
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -501,7 +513,7 @@ const DownloadButton = ({ fileIndex }: { fileIndex: number }) => {
         size="sm"
         variant="filled"
         color="green"
-        onClick={() => save(fileIndex)}
+        disabled
       >
         <IconDeviceFloppy size={14} />
       </ActionIcon>
